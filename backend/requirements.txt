@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+requests
+pandas
+python-pptx
+python-dotenv
+google-genai
+groq
+python-pptx
+matplotlib
+pandas
