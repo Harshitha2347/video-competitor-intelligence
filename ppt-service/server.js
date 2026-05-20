@@ -14,17 +14,17 @@ app.use("/reports", express.static("reports"))
 // --------------------------------------------------
 
 const C = {
-  BG:       "F6F1E7",   // warm cream (page background)
-  BG2:      "EEE4D2",   // slightly deeper cream
-  BG3:      "FFFFFF",   // card white
-  BG4:      "F0E8D8",   // light card / header row
-  ACCENT1:  "8B0000",   // deep red (primary)
-  ACCENT2:  "C21807",   // bright red (gradient end)
-  ACCENT3:  "7A3D1B",   // amber brown
-  ACCENT4:  "A0522D",   // sienna
-  WHITE:    "FFFFFF",
-  LIGHT:    "2A1E17",   // dark brown text
-  MUTED:    "7A3D1B",   // muted amber/brown
+  BG: "F6F1E7",   // warm cream (page background)
+  BG2: "EEE4D2",  // slightly deeper cream
+  BG3: "FFFFFF",  // card white
+  BG4: "F0E8D8",  // light card / header row
+  ACCENT1: "8B0000", // deep red (primary)
+  ACCENT2: "C21807", // bright red (gradient end)
+  ACCENT3: "7A3D1B", // amber brown
+  ACCENT4: "A0522D", // sienna
+  WHITE: "FFFFFF",
+  LIGHT: "2A1E17",   // dark brown text
+  MUTED: "7A3D1B",   // muted amber/brown
   DARK_TXT: "2A1E17",
   CHART: ["8B0000", "C21807", "7A3D1B", "A0522D", "661111", "D2691E"],
 }
@@ -37,22 +37,25 @@ const FONT_B = "Calibri"
 // --------------------------------------------------
 
 function safe(v) {
-  if (!v) return "No data available"
+  if (v === null || v === undefined || v === "") return "No data available"
   if (typeof v === "string") return v
   return JSON.stringify(v)
 }
 
 function fmt(n) {
-  if (!n && n !== 0) return "N/A"
+  if (n === null || n === undefined || n === "") return "N/A"
   const num = Number(n)
+  if (Number.isNaN(num)) return "N/A"
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M"
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "K"
   return num.toLocaleString()
 }
 
 function fmtFull(n) {
-  if (!n && n !== 0) return "N/A"
-  return Number(n).toLocaleString()
+  if (n === null || n === undefined || n === "") return "N/A"
+  const num = Number(n)
+  if (Number.isNaN(num)) return "N/A"
+  return num.toLocaleString()
 }
 
 function setupSlide(pptx, title, subtitle) {
@@ -109,6 +112,18 @@ function hLine(slide, pptx, x, y, w) {
   })
 }
 
+function smartAxisMax(values) {
+  const max = Math.max(...values, 0)
+
+  if (max <= 10) return 10
+  if (max <= 100) return Math.ceil(max * 1.4)
+  if (max <= 1_000) return Math.ceil(max / 100) * 100 * 1.25
+  if (max <= 10_000) return Math.ceil(max / 1_000) * 1_000 * 1.2
+  if (max <= 100_000) return Math.ceil(max / 10_000) * 10_000 * 1.2
+  if (max <= 1_000_000) return Math.ceil(max / 100_000) * 100_000 * 1.15
+  return Math.ceil(max / 1_000_000) * 1_000_000 * 1.15
+}
+
 // --------------------------------------------------
 // ROUTE
 // --------------------------------------------------
@@ -120,15 +135,15 @@ app.post("/generate-ppt", async (req, res) => {
     const data = req.body
     const companies = data.companies_analyzed || []
     const names = companies.map(c => c.channel_name)
-    const today = new Date().toLocaleDateString("en-US", {
+    const reportDate = new Date().toLocaleDateString("en-US", {
       year: "numeric", month: "long", day: "numeric",
     })
 
     const pptx = new PptxGenJS()
-    pptx.layout  = "LAYOUT_WIDE"
-    pptx.author  = "Video Intelligence"
+    pptx.layout = "LAYOUT_WIDE"
+    pptx.author = "Video Intelligence"
     pptx.company = "Competitor Analytics"
-    pptx.title   = "Video Competitor Intelligence"
+    pptx.title = "Video Competitor Intelligence"
 
     // ================================================
     // SLIDE 1 — COVER
@@ -178,7 +193,7 @@ app.post("/generate-ppt", async (req, res) => {
         })
       })
 
-      slide.addText(`Report Date: ${today}`, {
+      slide.addText(`Report Date: ${reportDate}`, {
         x: 0.9, y: 6.2, w: 6, h: 0.3,
         fontFace: FONT_B, fontSize: 11, color: C.MUTED,
       })
@@ -218,17 +233,17 @@ app.post("/generate-ppt", async (req, res) => {
       })
 
       const kpis = [
-        ["Subscribers",  data?.leaderboards?.highest_subscribers?.company  || "N/A"],
-        ["Engagement",   data?.leaderboards?.highest_engagement?.company   || "N/A"],
-        ["Avg Views",    data?.leaderboards?.highest_average_views?.company || "N/A"],
-        ["Most Active",  data?.leaderboards?.most_active_channel?.company  || "N/A"],
+        ["Subscribers", data?.leaderboards?.highest_subscribers?.company || "N/A"],
+        ["Engagement", data?.leaderboards?.highest_engagement?.company || "N/A"],
+        ["Avg Views", data?.leaderboards?.highest_average_views?.company || "N/A"],
+        ["Most Active", data?.leaderboards?.most_active_channel?.company || "N/A"],
       ]
 
-      const cardW   = 2.9
+      const cardW = 2.9
       const cardGap = 0.22
       const totalWidth = (cardW * 4) + (cardGap * 3)
-      const startX  = (13.33 - totalWidth) / 2
-      const startY  = summaryY + dynamicHeight + 0.55
+      const startX = (13.33 - totalWidth) / 2
+      const startY = summaryY + dynamicHeight + 0.55
 
       kpis.forEach(([label, value], i) => {
         const x = startX + i * (cardW + cardGap)
@@ -264,10 +279,10 @@ app.post("/generate-ppt", async (req, res) => {
     {
       const slide = setupSlide(pptx, "Channel Overview Comparison")
 
-      const count    = companies.length
+      const count = companies.length
       const totalGap = 0.18 * (count - 1)
-      const colW     = (12.5 - totalGap) / count
-      const gap      = 0.18
+      const colW = (12.5 - totalGap) / count
+      const gap = 0.18
 
       companies.forEach((c, i) => {
         const x = 0.4 + i * (colW + gap)
@@ -291,12 +306,12 @@ app.post("/generate-ppt", async (req, res) => {
         hLine(slide, pptx, x + 0.18, 1.95, colW - 0.36)
 
         const rows = [
-          ["Subscribers",  fmt(c.subscribers)],
+          ["Subscribers", fmt(c.subscribers)],
           ["Total Videos", fmtFull(c.total_videos)],
-          ["Avg Views",    fmt(c.average_views)],
-          ["Engagement",   `${c.engagement_rate}%`],
+          ["Avg Views", fmt(c.average_views)],
+          ["Engagement", `${c.engagement_rate}%`],
           ["Uploads/week", `~${Math.round((c.upload_frequency_per_day || 0) * 7)}`],
-          ["Cadence",      safe(c.upload_cadence)],
+          ["Cadence", safe(c.upload_cadence)],
         ]
 
         rows.forEach(([label, val], ri) => {
@@ -330,8 +345,8 @@ app.post("/generate-ppt", async (req, res) => {
       companies.slice(0, 4).forEach((c, i) => {
         const row = Math.floor(i / 2)
         const col = i % 2
-        const x   = 0.35 + col * 6.4
-        const y   = 1.3  + row * 3.1
+        const x = 0.35 + col * 6.4
+        const y = 1.3 + row * 3.1
         const accentColor = C.CHART[i % C.CHART.length]
 
         card(slide, pptx, x, y, 6.1, 2.85, C.BG3)
@@ -375,14 +390,14 @@ app.post("/generate-ppt", async (req, res) => {
 
         const topVid = c.top_video
         if (topVid) {
-          const cleanTitle  = (topVid.title || "N/A").replace(/\s+/g, " ").trim()
-          const titleLines  = Math.ceil(cleanTitle.length / 42)
+          const cleanTitle = (topVid.title || "N/A").replace(/\s+/g, " ").trim()
+          const titleLines = Math.ceil(cleanTitle.length / 42)
           const titleHeight = Math.min(0.75, Math.max(0.32, titleLines * 0.18))
 
           slide.addText(
             [
               { text: "TOP VIDEO: ", options: { bold: true, color: C.ACCENT1 } },
-              { text: cleanTitle,    options: { bold: false, color: C.LIGHT  } },
+              { text: cleanTitle, options: { bold: false, color: C.LIGHT } },
             ],
             {
               x: x + 0.3, y: y + 1.66,
@@ -415,11 +430,11 @@ app.post("/generate-ppt", async (req, res) => {
       )
 
       const contentW = 11.8
-      const startX   = (13.33 - contentW) / 2
+      const startX = (13.33 - contentW) / 2
       const themesText = safe(data.content_themes)
       const themeLines = Math.ceil(themesText.length / 82)
-      const themeH     = Math.max(2.1, Math.min(2.8, themeLines * 0.32))
-      const themeY     = 1.3
+      const themeH = Math.max(2.1, Math.min(2.8, themeLines * 0.32))
+      const themeY = 1.3
 
       card(slide, pptx, startX, themeY, contentW, themeH, C.BG3)
 
@@ -440,7 +455,7 @@ app.post("/generate-ppt", async (req, res) => {
         fontFace: FONT_B, fontSize: 15, color: C.LIGHT, valign: "mid", margin: 0,
       })
 
-      const rawMissing   = safe(data.missing_opportunities)
+      const rawMissing = safe(data.missing_opportunities)
       const missingItems = rawMissing
         .split("\n")
         .map(l => l.trim())
@@ -516,13 +531,13 @@ app.post("/generate-ppt", async (req, res) => {
       })
 
       const cadenceColor = (c) => {
-        if (c === "Very Active")       return C.ACCENT1
+        if (c === "Very Active") return C.ACCENT1
         if (c === "Moderately Active") return C.ACCENT3
         return "C21807"
       }
 
       companies.forEach((c, i) => {
-        const y      = 1.7 + i * 1.12
+        const y = 1.7 + i * 1.12
         const accent = C.CHART[i % C.CHART.length]
         const uploadsPerWeek = Math.round((c.upload_frequency_per_day || 0) * 7)
 
@@ -556,436 +571,461 @@ app.post("/generate-ppt", async (req, res) => {
       })
     }
 
-    can you change the scale of the 3 graphs as the other companies value lokks messy it will be better if all the bars are visible properly// ================================================
-// SLIDE 7 — ENGAGEMENT ANALYSIS
-// ================================================
-{
-  const slide = setupSlide(
-    pptx,
-    "Engagement Analysis",
-    "Average views, likes, and comments per video across channels"
-  )
-
-  // =================================================
-  // RAW DATA (NO NORMALIZATION)
-// =================================================
-
-  const companyLabels =
-    companies.map(c => c.channel_name)
-
-  const avgViews =
-    companies.map(c =>
-      Number(c.average_views) || 0
-    )
-
-  const avgLikes =
-    companies.map(c =>
-      Number(c.average_likes) || 0
-    )
-
-  const avgComments =
-    companies.map(c =>
-      Number(c.average_comments) || 0
-    )
-
-  // =================================================
-  // CHART POSITIONS
-  // =================================================
-
-  const chartW = 4.1
-  const chartH = 2.55
-
-  const topY = 1.35
-  const bottomY = 4.2
-
-  const gap = 0.22
-
-  const totalWidth =
-    (chartW * 3) + (gap * 2)
-
-  const startX =
-    (13.33 - totalWidth) / 2
-
-  // =================================================
-  // AVG VIEWS CHART
-  // =================================================
-
-  slide.addChart(
-    pptx.charts.BAR,
-    [{
-      name: "Avg Views",
-
-      labels: companyLabels,
-
-      values: avgViews,
-    }],
+    // ================================================
+    // SLIDE 7 — ENGAGEMENT ANALYSIS
+    // ================================================
     {
-      x: startX,
-      y: topY,
+      const slide = setupSlide(
+        pptx,
+        "Engagement Analysis",
+        "Average views, likes, and comments per video across channels"
+      )
 
-      w: chartW,
-      h: chartH,
+      // =================================================
+      // RAW DATA (NO NORMALIZATION)
+      // =================================================
 
-      barDir: "col",
+      const companyLabels =
+        companies.map(c => c.channel_name)
 
-      chartColors: [C.ACCENT1],
+      const avgViews =
+        companies.map(c =>
+          Number(c.average_views) || 0
+        )
 
-      chartArea: {
-        fill: {
-          color: C.BG3
+      const avgLikes =
+        companies.map(c =>
+          Number(c.average_likes) || 0
+        )
+
+      const avgComments =
+        companies.map(c =>
+          Number(c.average_comments) || 0
+        )
+
+      // =================================================
+      // SMART AXIS SCALING
+      // =================================================
+
+      const viewsMax =
+        smartAxisMax(avgViews)
+
+      const likesMax =
+        smartAxisMax(avgLikes)
+
+      const commentsMax =
+        smartAxisMax(avgComments)
+
+      // =================================================
+      // CHART POSITIONS
+      // =================================================
+
+      const chartW = 4.1
+      const chartH = 2.55
+
+      const topY = 1.35
+      const bottomY = 4.2
+
+      const gap = 0.22
+
+      const totalWidth =
+        (chartW * 3) + (gap * 2)
+
+      const startX =
+        (13.33 - totalWidth) / 2
+
+      // =================================================
+      // AVG VIEWS CHART
+      // =================================================
+
+      slide.addChart(
+        pptx.charts.BAR,
+        [{
+          name: "Avg Views",
+
+          labels: companyLabels,
+
+          values: avgViews,
+        }],
+        {
+          x: startX,
+          y: topY,
+
+          w: chartW,
+          h: chartH,
+
+          barDir: "col",
+
+          chartColors: [C.ACCENT1],
+
+          chartArea: {
+            fill: {
+              color: C.BG3
+            }
+          },
+
+          plotArea: {
+            fill: {
+              color: C.BG3
+            }
+          },
+
+          showLegend: false,
+
+          showValue: true,
+
+          dataLabelColor: C.WHITE,
+          dataLabelFontSize: 9,
+
+          catAxisLabelColor: C.MUTED,
+          valAxisLabelColor: C.MUTED,
+
+          catAxisLabelFontSize: 10,
+          valAxisLabelFontSize: 8,
+
+          catGridLine: {
+            style: "none"
+          },
+
+          valGridLine: {
+            color: C.BG4,
+            style: "solid",
+            pt: 0.5
+          },
+
+          gapWidthPct: 35,
+          valAxisMinVal: 0,
+          valAxisMaxVal: viewsMax,
         }
-      },
+      )
 
-      plotArea: {
-        fill: {
-          color: C.BG3
+      slide.addText(
+        "AVERAGE VIEWS",
+        {
+          x: startX,
+          y: topY - 0.22,
+
+          w: chartW,
+          h: 0.2,
+
+          fontFace: FONT_H,
+          fontSize: 13,
+
+          bold: true,
+
+          color: C.ACCENT1,
+
+          align: "center",
+
+          margin: 0,
         }
-      },
+      )
 
-      showLegend: false,
+      // =================================================
+      // AVG LIKES CHART
+      // =================================================
 
-      showValue: true,
+      slide.addChart(
+        pptx.charts.BAR,
+        [{
+          name: "Avg Likes",
 
-      dataLabelColor: C.WHITE,
-      dataLabelFontSize: 10,
+          labels: companyLabels,
 
-      catAxisLabelColor: C.MUTED,
-      valAxisLabelColor: C.MUTED,
+          values: avgLikes,
+        }],
+        {
+          x: startX + chartW + gap,
+          y: topY,
 
-      catAxisLabelFontSize: 11,
-      valAxisLabelFontSize: 9,
+          w: chartW,
+          h: chartH,
 
-      catGridLine: {
-        style: "none"
-      },
+          barDir: "col",
 
-      valGridLine: {
-        color: C.BG4,
-        style: "solid",
-        pt: 0.5
-      },
-    }
-  )
+          chartColors: [C.ACCENT2],
 
-  slide.addText(
-    "AVERAGE VIEWS",
-    {
-      x: startX,
-      y: topY - 0.22,
+          chartArea: {
+            fill: {
+              color: C.BG3
+            }
+          },
 
-      w: chartW,
-      h: 0.2,
+          plotArea: {
+            fill: {
+              color: C.BG3
+            }
+          },
 
-      fontFace: FONT_H,
-      fontSize: 13,
+          showLegend: false,
 
-      bold: true,
+          showValue: true,
 
-      color: C.ACCENT1,
+          dataLabelColor: C.WHITE,
+          dataLabelFontSize: 9,
 
-      align: "center",
+          catAxisLabelColor: C.MUTED,
+          valAxisLabelColor: C.MUTED,
 
-      margin: 0,
-    }
-  )
+          catAxisLabelFontSize: 10,
+          valAxisLabelFontSize: 8,
 
-  // =================================================
-  // AVG LIKES CHART
-  // =================================================
+          catGridLine: {
+            style: "none"
+          },
 
-  slide.addChart(
-    pptx.charts.BAR,
-    [{
-      name: "Avg Likes",
+          valGridLine: {
+            color: C.BG4,
+            style: "solid",
+            pt: 0.5
+          },
 
-      labels: companyLabels,
-
-      values: avgLikes,
-    }],
-    {
-      x: startX + chartW + gap,
-      y: topY,
-
-      w: chartW,
-      h: chartH,
-
-      barDir: "col",
-
-      chartColors: [C.ACCENT2],
-
-      chartArea: {
-        fill: {
-          color: C.BG3
+          gapWidthPct: 35,
+          valAxisMinVal: 0,
+          valAxisMaxVal: likesMax,
         }
-      },
+      )
 
-      plotArea: {
-        fill: {
-          color: C.BG3
+      slide.addText(
+        "AVERAGE LIKES",
+        {
+          x: startX + chartW + gap,
+          y: topY - 0.22,
+
+          w: chartW,
+          h: 0.2,
+
+          fontFace: FONT_H,
+          fontSize: 13,
+
+          bold: true,
+
+          color: C.ACCENT2,
+
+          align: "center",
+
+          margin: 0,
         }
-      },
+      )
 
-      showLegend: false,
+      // =================================================
+      // AVG COMMENTS CHART
+      // =================================================
 
-      showValue: true,
+      slide.addChart(
+        pptx.charts.BAR,
+        [{
+          name: "Avg Comments",
 
-      dataLabelColor: C.WHITE,
-      dataLabelFontSize: 10,
+          labels: companyLabels,
 
-      catAxisLabelColor: C.MUTED,
-      valAxisLabelColor: C.MUTED,
+          values: avgComments,
+        }],
+        {
+          x: startX + (chartW + gap) * 2,
+          y: topY,
 
-      catAxisLabelFontSize: 11,
-      valAxisLabelFontSize: 9,
+          w: chartW,
+          h: chartH,
 
-      catGridLine: {
-        style: "none"
-      },
+          barDir: "col",
 
-      valGridLine: {
-        color: C.BG4,
-        style: "solid",
-        pt: 0.5
-      },
-    }
-  )
+          chartColors: [C.ACCENT3],
 
-  slide.addText(
-    "AVERAGE LIKES",
-    {
-      x: startX + chartW + gap,
-      y: topY - 0.22,
+          chartArea: {
+            fill: {
+              color: C.BG3
+            }
+          },
 
-      w: chartW,
-      h: 0.2,
+          plotArea: {
+            fill: {
+              color: C.BG3
+            }
+          },
 
-      fontFace: FONT_H,
-      fontSize: 13,
+          showLegend: false,
 
-      bold: true,
+          showValue: true,
 
-      color: C.ACCENT2,
+          dataLabelColor: C.WHITE,
+          dataLabelFontSize: 9,
 
-      align: "center",
+          catAxisLabelColor: C.MUTED,
+          valAxisLabelColor: C.MUTED,
 
-      margin: 0,
-    }
-  )
+          catAxisLabelFontSize: 10,
+          valAxisLabelFontSize: 8,
 
-  // =================================================
-  // AVG COMMENTS CHART
-  // =================================================
+          catGridLine: {
+            style: "none"
+          },
 
-  slide.addChart(
-    pptx.charts.BAR,
-    [{
-      name: "Avg Comments",
+          valGridLine: {
+            color: C.BG4,
+            style: "solid",
+            pt: 0.5
+          },
 
-      labels: companyLabels,
-
-      values: avgComments,
-    }],
-    {
-      x: startX + (chartW + gap) * 2,
-      y: topY,
-
-      w: chartW,
-      h: chartH,
-
-      barDir: "col",
-
-      chartColors: [C.ACCENT3],
-
-      chartArea: {
-        fill: {
-          color: C.BG3
+          gapWidthPct: 35,
+          valAxisMinVal: 0,
+          valAxisMaxVal: commentsMax,
         }
-      },
+      )
 
-      plotArea: {
-        fill: {
-          color: C.BG3
+      slide.addText(
+        "AVERAGE COMMENTS",
+        {
+          x: startX + (chartW + gap) * 2,
+          y: topY - 0.22,
+
+          w: chartW,
+          h: 0.2,
+
+          fontFace: FONT_H,
+          fontSize: 13,
+
+          bold: true,
+
+          color: C.ACCENT3,
+
+          align: "center",
+
+          margin: 0,
         }
-      },
+      )
 
-      showLegend: false,
+      // =================================================
+      // INSIGHT BOX
+      // =================================================
 
-      showValue: true,
+      const insightText =
+        safe(data.engagement_analysis)
 
-      dataLabelColor: C.WHITE,
-      dataLabelFontSize: 10,
+      card(
+        slide,
+        pptx,
+        0.6,
+        bottomY,
+        12.1,
+        1.45,
+        C.BG3
+      )
 
-      catAxisLabelColor: C.MUTED,
-      valAxisLabelColor: C.MUTED,
+      slide.addText(
+        "ENGAGEMENT INSIGHTS",
+        {
+          x: 0.8,
+          y: bottomY + 0.18,
 
-      catAxisLabelFontSize: 11,
-      valAxisLabelFontSize: 9,
+          w: 11.7,
+          h: 0.22,
 
-      catGridLine: {
-        style: "none"
-      },
+          fontFace: FONT_H,
+          fontSize: 15,
 
-      valGridLine: {
-        color: C.BG4,
-        style: "solid",
-        pt: 0.5
-      },
+          bold: true,
+
+          color: C.ACCENT1,
+
+          align: "center",
+
+          margin: 0,
+        }
+      )
+
+      slide.addText(
+        insightText,
+        {
+          x: 1.0,
+          y: bottomY + 0.55,
+
+          w: 11.2,
+          h: 0.6,
+
+          fontFace: FONT_B,
+          fontSize: 13.5,
+
+          color: C.LIGHT,
+
+          align: "center",
+
+          valign: "mid",
+
+          margin: 0,
+        }
+      )
+
+      // =================================================
+      // ENGAGEMENT RATE ROW
+      // =================================================
+
+      const engRowY = 5.95
+
+      companies.forEach((c, i) => {
+        const bw =
+          12.5 / companies.length
+
+        const bx =
+          0.35 + i * bw
+
+        const accent =
+          C.CHART[i % C.CHART.length]
+
+        card(
+          slide,
+          pptx,
+          bx,
+          engRowY,
+          bw - 0.15,
+          0.82,
+          C.BG3
+        )
+
+        slide.addText(
+          `${c.engagement_rate}%`,
+          {
+            x: bx + 0.08,
+            y: engRowY + 0.08,
+
+            w: bw - 0.32,
+            h: 0.32,
+
+            fontFace: FONT_H,
+            fontSize: 20,
+
+            bold: true,
+
+            color: accent,
+
+            align: "center",
+
+            margin: 0,
+          }
+        )
+
+        slide.addText(
+          c.channel_name,
+          {
+            x: bx + 0.05,
+            y: engRowY + 0.46,
+
+            w: bw - 0.25,
+            h: 0.2,
+
+            fontFace: FONT_B,
+            fontSize: 11,
+
+            color: C.MUTED,
+
+            align: "center",
+
+            margin: 0,
+          }
+        )
+      })
     }
-  )
 
-  slide.addText(
-    "AVERAGE COMMENTS",
-    {
-      x: startX + (chartW + gap) * 2,
-      y: topY - 0.22,
-
-      w: chartW,
-      h: 0.2,
-
-      fontFace: FONT_H,
-      fontSize: 13,
-
-      bold: true,
-
-      color: C.ACCENT3,
-
-      align: "center",
-
-      margin: 0,
-    }
-  )
-
-  // =================================================
-  // INSIGHT BOX
-  // =================================================
-
-  const insightText =
-    safe(data.engagement_analysis)
-
-  card(
-    slide,
-    pptx,
-    0.6,
-    bottomY,
-    12.1,
-    1.45,
-    C.BG3
-  )
-
-  slide.addText(
-    "ENGAGEMENT INSIGHTS",
-    {
-      x: 0.8,
-      y: bottomY + 0.18,
-
-      w: 11.7,
-      h: 0.22,
-
-      fontFace: FONT_H,
-      fontSize: 15,
-
-      bold: true,
-
-      color: C.ACCENT1,
-
-      align: "center",
-
-      margin: 0,
-    }
-  )
-
-  slide.addText(
-    insightText,
-    {
-      x: 1.0,
-      y: bottomY + 0.55,
-
-      w: 11.2,
-      h: 0.6,
-
-      fontFace: FONT_B,
-      fontSize: 13.5,
-
-      color: C.LIGHT,
-
-      align: "center",
-
-      valign: "mid",
-
-      margin: 0,
-    }
-  )
-
-  // =================================================
-  // ENGAGEMENT RATE ROW
-  // =================================================
-
-  const engRowY = 5.95
-
-  companies.forEach((c, i) => {
-
-    const bw =
-      12.5 / companies.length
-
-    const bx =
-      0.35 + i * bw
-
-    const accent =
-      C.CHART[i % C.CHART.length]
-
-    card(
-      slide,
-      pptx,
-      bx,
-      engRowY,
-      bw - 0.15,
-      0.82,
-      C.BG3
-    )
-
-    slide.addText(
-      `${c.engagement_rate}%`,
-      {
-        x: bx + 0.08,
-        y: engRowY + 0.08,
-
-        w: bw - 0.32,
-        h: 0.32,
-
-        fontFace: FONT_H,
-        fontSize: 20,
-
-        bold: true,
-
-        color: accent,
-
-        align: "center",
-
-        margin: 0,
-      }
-    )
-
-    slide.addText(
-      c.channel_name,
-      {
-        x: bx + 0.05,
-        y: engRowY + 0.46,
-
-        w: bw - 0.25,
-        h: 0.2,
-
-        fontFace: FONT_B,
-        fontSize: 11,
-
-        color: C.MUTED,
-
-        align: "center",
-
-        margin: 0,
-      }
-    )
-  })
-}
     // ================================================
     // SLIDE 8 — GAP ANALYSIS
     // ================================================
@@ -996,21 +1036,21 @@ app.post("/generate-ppt", async (req, res) => {
         "Topics, formats, and audience segments competitors are missing"
       )
 
-      const gapText   = safe(data.gap_analysis)
+      const gapText = safe(data.gap_analysis)
       const gapPoints = gapText
         .split(/(?<=[.!?])\s+/)
         .map(s => s.trim())
         .filter(s => s.length > 10)
         .slice(0, 5)
 
-      const LEFT_X  = 0.38
-      const LEFT_W  = 7.55
+      const LEFT_X = 0.38
+      const LEFT_W = 7.55
       const RIGHT_X = 8.18
       const RIGHT_W = 4.78
-      const TOP_Y   = 1.22
+      const TOP_Y = 1.22
       const HEADER_H = 0.75
-      const PT_H     = 0.8
-      const PT_GAP   = 0.1
+      const PT_H = 0.8
+      const PT_GAP = 0.1
 
       const gapBoxH = HEADER_H + gapPoints.length * (PT_H + PT_GAP) + 0.22
 
@@ -1028,7 +1068,7 @@ app.post("/generate-ppt", async (req, res) => {
       })
 
       gapPoints.forEach((point, idx) => {
-        const rowY  = TOP_Y + HEADER_H + idx * (PT_H + PT_GAP)
+        const rowY = TOP_Y + HEADER_H + idx * (PT_H + PT_GAP)
         const accent = C.CHART[idx % C.CHART.length]
 
         slide.addShape(pptx.shapes.OVAL, {
@@ -1046,8 +1086,8 @@ app.post("/generate-ppt", async (req, res) => {
       })
 
       const chartLabelH = 0.3
-      const chartY      = 1.08
-      const chartH      = 2.2
+      const chartY = 1.08
+      const chartH = 2.2
 
       slide.addText("SUBSCRIBER REACH", {
         x: RIGHT_X, y: chartY, w: RIGHT_W, h: chartLabelH,
@@ -1092,13 +1132,13 @@ app.post("/generate-ppt", async (req, res) => {
 
       const visibleCompanies = companies.slice(0, 3)
       const cardGap = 0.1
-      const availH  = 7.45 - (uploadsStartY + 0.45)
-      const cardH   = (availH - ((visibleCompanies.length - 1) * cardGap)) / visibleCompanies.length
+      const availH = 7.45 - (uploadsStartY + 0.45)
+      const cardH = (availH - ((visibleCompanies.length - 1) * cardGap)) / visibleCompanies.length
 
       visibleCompanies.forEach((c, i) => {
         const accent = C.CHART[i % C.CHART.length]
-        const vids   = (c.recent_videos || []).slice(0, 2)
-        const cardY  = uploadsStartY + 0.38 + i * (cardH + cardGap)
+        const vids = (c.recent_videos || []).slice(0, 2)
+        const cardY = uploadsStartY + 0.38 + i * (cardH + cardGap)
 
         card(slide, pptx, RIGHT_X, cardY, RIGHT_W, cardH, C.BG3)
 
@@ -1143,18 +1183,18 @@ app.post("/generate-ppt", async (req, res) => {
         .slice(0, 6)
 
       const totalRecs = recLines.length
-      const half      = Math.ceil(totalRecs / 2)
-      const leftRecs  = recLines.slice(0, half)
+      const half = Math.ceil(totalRecs / 2)
+      const leftRecs = recLines.slice(0, half)
       const rightRecs = recLines.slice(half)
 
-      const CARD_H  = 1.05
+      const CARD_H = 1.05
       const CARD_GAP = 0.22
-      const START_Y  = 1.38
-      const COL_W    = 6.1
+      const START_Y = 1.38
+      const COL_W = 6.1
 
       const renderRecs = (list, startX, startIndex) => {
         list.forEach((rec, i) => {
-          const y      = START_Y + i * (CARD_H + CARD_GAP)
+          const y = START_Y + i * (CARD_H + CARD_GAP)
           const number = startIndex + i + 1
           const accent = C.CHART[number % C.CHART.length]
 
@@ -1189,7 +1229,7 @@ app.post("/generate-ppt", async (req, res) => {
         })
       }
 
-      renderRecs(leftRecs,  0.35, 0)
+      renderRecs(leftRecs, 0.35, 0)
       renderRecs(rightRecs, 6.82, leftRecs.length)
     }
 
@@ -1203,23 +1243,23 @@ app.post("/generate-ppt", async (req, res) => {
         "Overall performance scores across key metrics"
       )
 
-      const maxSubs  = Math.max(...companies.map(c => c.subscribers             || 0))
-      const maxViews = Math.max(...companies.map(c => c.average_views           || 0))
-      const maxEng   = Math.max(...companies.map(c => c.engagement_rate         || 0))
-      const maxFreq  = Math.max(...companies.map(c => c.upload_frequency_per_day || 0))
+      const maxSubs = Math.max(...companies.map(c => c.subscribers || 0))
+      const maxViews = Math.max(...companies.map(c => c.average_views || 0))
+      const maxEng = Math.max(...companies.map(c => c.engagement_rate || 0))
+      const maxFreq = Math.max(...companies.map(c => c.upload_frequency_per_day || 0))
 
       const scored = companies
         .map(c => {
-          const s = maxSubs  > 0 ? (c.subscribers             / maxSubs)  * 25 : 0
-          const v = maxViews > 0 ? (c.average_views            / maxViews) * 25 : 0
-          const e = maxEng   > 0 ? (c.engagement_rate          / maxEng)   * 25 : 0
-          const f = maxFreq  > 0 ? (c.upload_frequency_per_day / maxFreq)  * 25 : 0
+          const s = maxSubs > 0 ? (c.subscribers / maxSubs) * 25 : 0
+          const v = maxViews > 0 ? (c.average_views / maxViews) * 25 : 0
+          const e = maxEng > 0 ? (c.engagement_rate / maxEng) * 25 : 0
+          const f = maxFreq > 0 ? (c.upload_frequency_per_day / maxFreq) * 25 : 0
           return { ...c, totalScore: Math.round(s + v + e + f) }
         })
         .sort((a, b) => b.totalScore - a.totalScore)
 
-      const tableY    = 1.35
-      const headers   = ["Rank", "Channel", "Subscribers", "Avg Views", "Engagement", "Frequency"]
+      const tableY = 1.35
+      const headers = ["Rank", "Channel", "Subscribers", "Avg Views", "Engagement", "Frequency"]
       const colWidths = [0.9, 3.0, 1.8, 1.8, 1.8, 2.0]
 
       let cx = 1.0
@@ -1237,7 +1277,7 @@ app.post("/generate-ppt", async (req, res) => {
       })
 
       scored.forEach((c, ri) => {
-        const rowY       = tableY + 0.6 + ri * 0.78
+        const rowY = tableY + 0.6 + ri * 0.78
         const accentColor = C.CHART[ri % C.CHART.length]
 
         card(slide, pptx, 1.0, rowY, 10.8, 0.7, ri % 2 === 0 ? C.BG3 : C.BG4)
@@ -1261,10 +1301,10 @@ app.post("/generate-ppt", async (req, res) => {
         })
       })
 
-      const verdict       = safe(data.final_ranking).split("\n")[0]
-      const verdictLines  = Math.ceil(verdict.length / 90)
+      const verdict = safe(data.final_ranking).split("\n")[0]
+      const verdictLines = Math.ceil(verdict.length / 90)
       const verdictHeight = Math.max(0.7, Math.min(1.2, verdictLines * 0.28))
-      const verdictY      = tableY + 0.7 + scored.length * 0.78 + 0.35
+      const verdictY = tableY + 0.7 + scored.length * 0.78 + 0.35
 
       card(slide, pptx, 1.0, verdictY, 10.8, verdictHeight, C.BG4)
 
@@ -1286,17 +1326,17 @@ app.post("/generate-ppt", async (req, res) => {
     // SAVE
     // ================================================
 
-    const today = new Date()
+    const saveDate = new Date()
 
     const formattedDate =
-    `${today.getFullYear()}-${
-        String(today.getMonth() + 1).padStart(2, "0")
-    }-${
-        String(today.getDate()).padStart(2, "0")
-    }`
+      `${saveDate.getFullYear()}-${
+        String(saveDate.getMonth() + 1).padStart(2, "0")
+      }-${
+        String(saveDate.getDate()).padStart(2, "0")
+      }`
 
     const fileName =
-    `reports/Video Competitor Intelligence Report ${formattedDate}.pptx`
+      `reports/Video Competitor Intelligence Report ${formattedDate}.pptx`
 
     console.log("WRITING PPT")
 
