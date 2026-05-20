@@ -471,7 +471,7 @@ def analyze(data:CompanyRequest):
 
     try:
         ppt_response=httpx.post(
-            "http://127.0.0.1:5000/generate-ppt",
+            "https://ppt-service.onrender.com",
             json=report_response,
             timeout=120
         )
