@@ -40,7 +40,7 @@ function App() {
       // =========================================
 
       const analysisResponse = await fetch(
-        "https://video-competitor-intelligence-i31j.onrender.com/analyse",
+        "https://video-competitor-intelligence-i31j.onrender.com/analyze",
         {
           method: "POST",
 
