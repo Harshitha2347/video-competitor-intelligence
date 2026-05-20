@@ -190,41 +190,41 @@ function App() {
         <div style={reportContainer}>
           <div style={cardStyle}>
             <h2 style={headingStyle}>Executive Summary</h2>
-            <p style={textStyle}>{safeText(reportData.executive_summary)}</p>
+            <p style={textStyle}>{safeText(reportData.analysis?.executive_summary)}</p>
           </div>
 
           <div style={kpiContainer}>
             <div style={kpiStyle}>
               <h3 style={kpiHeading}>Highest Subscribers</h3>
               <p style={kpiValue}>
-                {reportData?.leaderboards?.highest_subscribers?.company||"N/A"}
+                {reportData?.analysis?.leaderboards?.highest_subscribers?.company||"N/A"}
               </p>
             </div>
 
             <div style={kpiStyle}>
               <h3 style={kpiHeading}>Highest Engagement</h3>
               <p style={kpiValue}>
-                {reportData?.leaderboards?.highest_engagement?.company||"N/A"}
+                {reportData?.analysis?.leaderboards?.highest_engagement?.company||"N/A"}
               </p>
             </div>
 
             <div style={kpiStyle}>
               <h3 style={kpiHeading}>Highest Avg Views</h3>
               <p style={kpiValue}>
-                {reportData?.leaderboards?.highest_average_views?.company||"N/A"}
+                {reportData?.analysis?.leaderboards?.highest_average_views?.company||"N/A"}
               </p>
             </div>
 
             <div style={kpiStyle}>
               <h3 style={kpiHeading}>Most Active</h3>
               <p style={kpiValue}>
-                {reportData?.leaderboards?.most_active_channel?.company||"N/A"}
+                {reportData?.analysis?.leaderboards?.most_active_channel?.company||"N/A"}
               </p>
             </div>
           </div>
 
           <div style={companyGrid}>
-            {reportData?.companies_analyzed?.map((companyItem,index)=>(
+            {reportData?.analysis?.companies_analyzed?.map((companyItem,index)=>(
               <div key={index} style={companyCard}>
                 <h2 style={companyTitle}>{companyItem.channel_name}</h2>
 
@@ -262,7 +262,7 @@ function App() {
           <div style={cardStyle}>
             <h2 style={headingStyle}>Content Themes</h2>
             <ul style={bulletListStyle}>
-              {convertToPoints(reportData.content_themes).map((point,index)=>(
+              {convertToPoints(reportData.analysis?.content_themes).map((point,index)=>(
                 <li key={index} style={bulletItem}>{point}</li>
               ))}
             </ul>
@@ -271,7 +271,7 @@ function App() {
           <div style={cardStyle}>
             <h2 style={headingStyle}>Gap Analysis</h2>
             <ul style={bulletListStyle}>
-              {convertToPoints(reportData.gap_analysis).map((point,index)=>(
+              {convertToPoints(reportData.analysis?.gap_analysis).map((point,index)=>(
                 <li key={index} style={bulletItem}>{point}</li>
               ))}
             </ul>
@@ -280,7 +280,7 @@ function App() {
           <div style={cardStyle}>
             <h2 style={headingStyle}>Recommendations</h2>
             <ul style={bulletListStyle}>
-              {convertToPoints(reportData.recommendations).map((point,index)=>(
+              {convertToPoints(reportData.analysis?.recommendations).map((point,index)=>(
                 <li key={index} style={bulletItem}>{point}</li>
               ))}
             </ul>
