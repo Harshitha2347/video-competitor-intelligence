@@ -24,52 +24,84 @@ function App() {
       .filter(item=>item.length>5)
   }
 
-  async function generateReport() {
-    const competitors=[competitor1,competitor2,competitor3,competitor4]
-      .map(item=>item.trim())
-      .filter(Boolean)
-
-    if(!company.trim()) {
-      setError("Please enter your company name.")
-      return
-    }
-
-    if(competitors.length===0) {
-      setError("Please enter at least one competitor.")
-      return
-    }
-
+  const generateReport = async () => {
     try {
       setLoading(true)
-      setError("")
-      setReportData(null)
 
-      const response=await fetch("https://ppt-service.onrender.com/generate-ppt",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-          company:company.trim(),
-          competitors
-        })
-      })
+      // =========================================
+      // CREATE COMPETITOR ARRAY
+      // =========================================
 
-      const data=await response.json()
+      const competitorList = [competitor1, competitor2, competitor3, competitor4]
+        .filter(c => c.trim() !== "")
 
-      if(!response.ok) {
-        throw new Error(data?.error||"Failed to generate report.")
+      // =========================================
+      // STEP 1 — CALL FASTAPI ANALYZE
+      // =========================================
+
+      const analysisResponse = await fetch(
+        "https://YOUR-BACKEND.onrender.com/analyze",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            company: company.trim(),
+            competitors: competitorList,
+          }),
+        }
+      )
+
+      const analysisData =
+        await analysisResponse.json()
+
+      console.log("ANALYSIS DATA:")
+      console.log(analysisData)
+
+      // =========================================
+      // VERY IMPORTANT CHECK
+      // =========================================
+
+      if (!analysisData.companies_analyzed) {
+        alert("Backend did not return analysis data")
+        console.log(analysisData)
+        return
       }
 
-      if(data?.error) {
-        throw new Error(data.error)
-      }
+      // =========================================
+      // STEP 2 — SEND TO PPT SERVICE
+      // =========================================
 
-      setReportData(data)
-    } catch(err) {
-      console.log(err)
-      setError(err.message||"Something went wrong while generating the report.")
-    } finally {
+      const pptResponse = await fetch(
+        "https://ppt-service.onrender.com/generate-ppt",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify(analysisData),
+        }
+      )
+
+      const pptData =
+        await pptResponse.json()
+
+      console.log("PPT DATA:")
+      console.log(pptData)
+
+      setReportData(pptData)
+
+    } catch (err) {
+      console.error(err)
+      alert("Failed to generate report")
+    }
+
+    finally {
       setLoading(false)
     }
   }
