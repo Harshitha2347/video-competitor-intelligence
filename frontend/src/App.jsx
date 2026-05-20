@@ -244,7 +244,7 @@ function App() {
 
           {reportData.ppt_path&&(
             <div style={{textAlign:"center"}}>
-              <a href={`http://127.0.0.1:5000/${reportData.ppt_path}`} download>
+              <a href={`https://video-competitor-intelligence-i31j.onrender.com/${reportData.ppt_path}`} download>
                 <button style={downloadButton}>Download PowerPoint Report</button>
               </a>
             </div>
