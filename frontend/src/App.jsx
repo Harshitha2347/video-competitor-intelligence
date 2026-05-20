@@ -244,7 +244,7 @@ function App() {
 
           {reportData.ppt_path&&(
             <div style={{textAlign:"center"}}>
-              <a href={`https://ppt-service.onrender.com${reportData.ppt_path}`} download>
+              <a href={`https://ppt-service.onrender.com/${reportData.ppt_path}`} download>
                 <button style={downloadButton}>Download PowerPoint Report</button>
               </a>
             </div>
