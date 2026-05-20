@@ -44,7 +44,7 @@ function App() {
       setError("")
       setReportData(null)
 
-      const response=await fetch("https://video-competitor-intelligence-i31j.onrender.com",{
+      const response=await fetch("https://ppt-service.onrender.com",{
         method:"POST",
         headers:{
           "Content-Type":"application/json"
