@@ -7,7 +7,7 @@ const PptxGenJS = require("pptxgenjs");
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use("/reports", express.static("reports"));
 
 const C = {
@@ -28,6 +28,11 @@ const C = {
 
 const FONT_H = "Trebuchet MS";
 const FONT_B = "Calibri";
+const reportsDir = path.join(__dirname, "reports");
+
+if (!fs.existsSync(reportsDir)) {
+  fs.mkdirSync(reportsDir, { recursive: true });
+}
 
 function safe(v) {
   if (v === null || v === undefined || v === "") return "No data available";
@@ -49,6 +54,18 @@ function fmtFull(n) {
   const num = Number(n);
   if (Number.isNaN(num)) return "N/A";
   return num.toLocaleString();
+}
+
+function smartAxisMax(values) {
+  const max = Math.max(...values, 0);
+
+  if (max <= 10) return 10;
+  if (max <= 100) return Math.ceil(max * 1.4);
+  if (max <= 1_000) return Math.ceil(max / 100) * 100 * 1.25;
+  if (max <= 10_000) return Math.ceil(max / 1_000) * 1_000 * 1.2;
+  if (max <= 100_000) return Math.ceil(max / 10_000) * 10_000 * 1.2;
+  if (max <= 1_000_000) return Math.ceil(max / 100_000) * 100_000 * 1.15;
+  return Math.ceil(max / 1_000_000) * 1_000_000 * 1.15;
 }
 
 function setupSlide(pptx, title, subtitle) {
@@ -146,31 +163,25 @@ function hLine(slide, pptx, x, y, w) {
   });
 }
 
-function smartAxisMax(values) {
-  const max = Math.max(...values, 0);
-
-  if (max <= 10) return 10;
-  if (max <= 100) return Math.ceil(max * 1.4);
-  if (max <= 1_000) return Math.ceil(max / 100) * 100 * 1.25;
-  if (max <= 10_000) return Math.ceil(max / 1_000) * 1_000 * 1.2;
-  if (max <= 100_000) return Math.ceil(max / 10_000) * 10_000 * 1.2;
-  if (max <= 1_000_000) return Math.ceil(max / 100_000) * 100_000 * 1.15;
-  return Math.ceil(max / 1_000_000) * 1_000_000 * 1.15;
-}
-
-const reportsDir = path.join(__dirname, "reports");
-
-if (!fs.existsSync(reportsDir)) {
-  fs.mkdirSync(reportsDir, { recursive: true });
-}
+app.get("/", (req, res) => {
+  res.json({ message: "PPT Service is working" });
+});
 
 app.post("/generate-ppt", async (req, res) => {
   try {
     console.log("STARTING PPT GENERATION");
 
     const data = req.body || {};
-    const companies = data.companies_analyzed || [];
-    const names = companies.map(c => c.channel_name);
+
+    if (!data || !Array.isArray(data.companies_analyzed) || data.companies_analyzed.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid analysis payload. 'companies_analyzed' is required.",
+      });
+    }
+
+    const companies = data.companies_analyzed;
+    const names = companies.map(c => c.channel_name || "Unknown");
     const reportDate = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -357,7 +368,7 @@ app.post("/generate-ppt", async (req, res) => {
 
       const count = companies.length;
       const totalGap = 0.18 * (count - 1);
-      const colW = (12.5 - totalGap) / count;
+      const colW = count > 0 ? (12.5 - totalGap) / count : 12.5;
       const gap = 0.18;
 
       companies.forEach((c, i) => {
@@ -797,13 +808,7 @@ app.post("/generate-ppt", async (req, res) => {
 
       slide.addChart(
         pptx.charts.BAR,
-        [
-          {
-            name: "Avg Views",
-            labels: companyLabels,
-            values: avgViews,
-          },
-        ],
+        [{ name: "Avg Views", labels: companyLabels, values: avgViews }],
         {
           x: startX,
           y: topY,
@@ -844,13 +849,7 @@ app.post("/generate-ppt", async (req, res) => {
 
       slide.addChart(
         pptx.charts.BAR,
-        [
-          {
-            name: "Avg Likes",
-            labels: companyLabels,
-            values: avgLikes,
-          },
-        ],
+        [{ name: "Avg Likes", labels: companyLabels, values: avgLikes }],
         {
           x: startX + chartW + gap,
           y: topY,
@@ -891,13 +890,7 @@ app.post("/generate-ppt", async (req, res) => {
 
       slide.addChart(
         pptx.charts.BAR,
-        [
-          {
-            name: "Avg Comments",
-            labels: companyLabels,
-            values: avgComments,
-          },
-        ],
+        [{ name: "Avg Comments", labels: companyLabels, values: avgComments }],
         {
           x: startX + (chartW + gap) * 2,
           y: topY,
@@ -1330,6 +1323,7 @@ app.post("/generate-ppt", async (req, res) => {
 
         const medal = ri === 0 ? "🥇" : ri === 1 ? "🥈" : ri === 2 ? "🥉" : `#${ri + 1}`;
         const uploadsPerWeek = Math.round((c.upload_frequency_per_day || 0) * 7);
+
         const vals = [
           medal,
           c.channel_name,
@@ -1396,24 +1390,22 @@ app.post("/generate-ppt", async (req, res) => {
     const fileName = path.join(reportsDir, publicFileName);
 
     console.log("WRITING PPT");
-
-    await pptx.writeFile({
-      fileName,
-    });
-
+    await pptx.writeFile({ fileName });
     console.log("PPT SAVED:", fileName);
 
-    res.json({
+    return res.json({
       success: true,
       ppt_path: `/reports/${publicFileName}`,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
+    console.error("PPT GENERATION ERROR:", err);
+    return res.status(500).json({
       success: false,
-      error: err.message,
+      error: err.message || "Something went wrong while generating PPT",
     });
   }
 });
 
-app.listen(5000, () => console.log("PPT Service running on port 5000"));
+app.listen(5000, () => {
+  console.log("PPT Service running on port 5000");
+});
