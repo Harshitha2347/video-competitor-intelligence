@@ -104,7 +104,10 @@ function App() {
         throw new Error(pptData.error)
       }
 
-      setReportData(pptData)
+      setReportData({
+        analysis: analysisData,
+        ppt_path: pptData.ppt_path
+      })
 
     } catch (err) {
       console.error("Full error:", err)
