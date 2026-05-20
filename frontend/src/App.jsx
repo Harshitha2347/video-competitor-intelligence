@@ -40,7 +40,7 @@ function App() {
       // =========================================
 
       const analysisResponse = await fetch(
-        "https://YOUR-BACKEND.onrender.com/analyze",
+        "https://video-competitor-intelligence-i31j.onrender.com",
         {
           method: "POST",
 
@@ -55,6 +55,10 @@ function App() {
         }
       )
 
+      if (!analysisResponse.ok) {
+        throw new Error(`Backend error: ${analysisResponse.status} ${analysisResponse.statusText}`)
+      }
+
       const analysisData =
         await analysisResponse.json()
 
@@ -66,9 +70,7 @@ function App() {
       // =========================================
 
       if (!analysisData.companies_analyzed) {
-        alert("Backend did not return analysis data")
-        console.log(analysisData)
-        return
+        throw new Error("Backend did not return companies_analyzed")
       }
 
       // =========================================
@@ -88,17 +90,27 @@ function App() {
         }
       )
 
+      if (!pptResponse.ok) {
+        throw new Error(`PPT service error: ${pptResponse.status} ${pptResponse.statusText}`)
+      }
+
       const pptData =
         await pptResponse.json()
 
       console.log("PPT DATA:")
       console.log(pptData)
 
+      if (pptData.error) {
+        throw new Error(pptData.error)
+      }
+
       setReportData(pptData)
 
     } catch (err) {
-      console.error(err)
-      alert("Failed to generate report")
+      console.error("Full error:", err)
+      const errorMsg = err?.message || "Unknown error"
+      setError(`Failed: ${errorMsg}`)
+      alert(`Failed to generate report: ${errorMsg}`)
     }
 
     finally {
