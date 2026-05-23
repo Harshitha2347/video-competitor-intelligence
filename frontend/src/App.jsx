@@ -127,7 +127,7 @@ function App() {
         <div style={overlay}></div>
         <div style={heroContent}>
           <img src="/youtube.jpeg" alt="YouTube" style={youtubeLogo} />
-          <h1 style={mainTitle}>Video Competitor Intelligence and Report Generator</h1>
+          <h1 style={mainTitle}>Video Competitor Intelligence</h1>
           <p style={subTitle}>AI-Powered YouTube Competitor Analysis</p>
         </div>
       </div>
